@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 #include <string>
 
 #include "export.h"
