@@ -25,9 +25,6 @@ TEST(PtrMaybeTest, SmokeTest) {
   example = std::move(v);
   EXPECT_TRUE(example.isJust());
   EXPECT_THAT(*example.fromJust(), testing::ElementsAre(42, 21));
-  std::unique_ptr<std::vector<uint32_t>> out = example.takeJust();
-  EXPECT_FALSE(example.isJust());
-  EXPECT_THAT(*out, testing::ElementsAre(42, 21));
 }
 
 TEST(PtrValueTest, SmokeTest) {
@@ -37,8 +34,6 @@ TEST(PtrValueTest, SmokeTest) {
   example = 42;
   EXPECT_TRUE(example.isJust());
   EXPECT_EQ(42, example.fromJust());
-  int32_t out = example.takeJust();
-  EXPECT_EQ(out, 42);
 }
 
 }  // namespace crdtp
