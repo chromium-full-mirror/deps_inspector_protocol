@@ -94,11 +94,15 @@ class ValueMaybe {
     return is_just_ ? value_ : std::forward<U>(default_value);
   }
   template <typename U>
-  T value_or(T&& default_value) && {
+  T value_or(U&& default_value) && {
     return is_just_ ? std::move(value_) : std::forward<U>(default_value);
   }
   T* operator->() { return &value(); }
   const T* operator->() const { return &value(); }
+
+  T& operator*() & { return value(); }
+  const T& operator*() const& { return value(); }
+  T&& operator*() && { return std::move(value()); }
 
   // Legacy Maybe<> accessors (deprecated).
   const T& fromJust() const {
