@@ -345,11 +345,11 @@ class JSONEncoder : public ParserHandler {
   }
 
  private:
-  void Emit(char c) { out_->push_back(c); }
-  void Emit(const char* str) {
+  inline void Emit(char c) { out_->push_back(c); }
+  inline void Emit(const char* str) {
     out_->insert(out_->end(), str, str + strlen(str));
   }
-  void Emit(const std::string& str) {
+  inline void Emit(const std::string& str) {
     out_->insert(out_->end(), str.begin(), str.end());
   }
 
