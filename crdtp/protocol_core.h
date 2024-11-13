@@ -8,7 +8,6 @@
 #include <sys/types.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -85,7 +84,7 @@ class CRDTP_EXPORT ContainerSerializer {
     ProtocolTypeTraits<T>::Serialize(value, bytes_);
   }
   template <typename T>
-  void AddField(span<char> field_name, const std::optional<T>& value) {
+  void AddField(span<char> field_name, const detail::ValueMaybe<T>& value) {
     if (!value.has_value()) {
       return;
     }
@@ -215,9 +214,9 @@ struct CRDTP_EXPORT ProtocolTypeTraits<std::unique_ptr<DeferredMessage>> {
 };
 
 template <typename T>
-struct ProtocolTypeTraits<std::optional<T>> {
+struct ProtocolTypeTraits<detail::ValueMaybe<T>> {
   static bool Deserialize(DeserializerState* state,
-                          std::optional<T>* value) {
+                          detail::ValueMaybe<T>* value) {
     T res;
     if (!ProtocolTypeTraits<T>::Deserialize(state, &res))
       return false;
@@ -225,7 +224,7 @@ struct ProtocolTypeTraits<std::optional<T>> {
     return true;
   }
 
-  static void Serialize(const std::optional<T>& value,
+  static void Serialize(const detail::ValueMaybe<T>& value,
                         std::vector<uint8_t>* bytes) {
     ProtocolTypeTraits<T>::Serialize(value.value(), bytes);
   }
