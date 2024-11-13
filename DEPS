@@ -21,6 +21,9 @@ vars = {
   'libcxxabi_revision': '1876d9993041bd6960d3abd6dfe5a94acd3a9703',
   'libunwind_revision': '05a4a0312ecc98ac5fbda3823302bc96e47e9ab1',
   'clang_format_revision': '99876cacf78329e5f99c244dbe42ccd1654517a0',
+  # ninja CIPD package version.
+  # https://chrome-infra-packages.appspot.com/p/infra/3pp/tools/ninja
+  'ninja_version': 'version:3@1.12.1.chromium.4',
 }
 
 # The keys in this dictionary define where the external dependencies (values)
@@ -78,11 +81,21 @@ deps = {
   # The toolchain definitions (clang C++ compiler etc.)
   'src/third_party/mini_chromium/mini_chromium':
       Var('chromium_git') + '/chromium/mini_chromium@' +
-      '461b416dbe5f40a060ee08764b4986a949da6e6e',
+      'c4bcfd045d8dab7f78c7e17a74672e3509a1f182',
   # For writing unittests.
   'src/third_party/gtest/gtest':
       Var('chromium_git') + '/external/github.com/google/googletest@' +
       '16f637fbf4ffc3f7a01fa4eceb7906634565242f',
+
+  'third_party/ninja': {
+    'packages': [
+      {
+        'package': 'infra/3pp/tools/ninja/${{platform}}',
+        'version': Var('ninja_version'),
+      }
+    ],
+    'dep_type': 'cipd',
+  },
 }
 
 hooks = [
