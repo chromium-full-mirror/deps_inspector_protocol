@@ -48,6 +48,7 @@ class PtrMaybe {
   T& operator*() & { return value(); }
   const T& operator*() const& { return value(); }
   T&& operator*() && { return std::move(value()); }
+  T* get() const { return value_.get(); }
 
   // Legacy Maybe<> accessors (deprecated).
   T* fromJust() const {
