@@ -7,8 +7,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <type_traits>
 #include <string>
+#include <type_traits>
 
 #include "export.h"
 
@@ -23,8 +23,16 @@ class span {
  public:
   using index_type = size_t;
 
-  constexpr span() : data_(nullptr), size_(0) {}
+  constexpr span() = default;
   constexpr span(const T* data, index_type size) : data_(data), size_(size) {}
+
+  template <
+      typename Container,
+      typename = std::enable_if_t<
+          std::is_convertible_v<typename Container::value_type*, const T*>>>
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  span(const Container& container)
+      : data_(container.data()), size_(container.size()) {}
 
   constexpr const T* data() const { return data_; }
 
@@ -47,8 +55,8 @@ class span {
   constexpr index_type size_bytes() const { return size_ * sizeof(T); }
 
  private:
-  const T* data_;
-  index_type size_;
+  const T* data_ = nullptr;
+  index_type size_ = 0;
 };
 
 template <size_t N>
