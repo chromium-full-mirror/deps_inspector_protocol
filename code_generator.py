@@ -677,7 +677,10 @@ def main():
       domain_outputs.append(output_import_h)
       domain_inputs.append(imported_template.filename)
 
-    domain_inputs.append(domain["source"])
+    # If generated from a json file, domains might not have
+    # any other input dependencies.
+    if "source" in domain:
+      domain_inputs.append(domain["source"])
     for output in domain_outputs:
       deps.setdefault(output, []).extend(domain_inputs)
 
