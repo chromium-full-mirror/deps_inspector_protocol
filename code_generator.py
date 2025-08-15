@@ -644,7 +644,6 @@ def main():
   imported_template = jinja_env.get_template("templates/Imported_h.template")
 
   outputs = dict()
-  deps = set()
 
   for domain in protocol.json_api["domains"]:
     class_name = domain["domain"]
