@@ -24,6 +24,7 @@ config("gtest_public_config") {
 static_library("gtest") {
   testonly = true
   sources = [
+    "gtest/googletest/include/gtest/gtest-assertion-result.h",
     "gtest/googletest/include/gtest/gtest-death-test.h",
     "gtest/googletest/include/gtest/gtest-matchers.h",
     "gtest/googletest/include/gtest/gtest-message.h",
@@ -48,6 +49,7 @@ static_library("gtest") {
     "gtest/googletest/include/gtest/internal/gtest-string.h",
     "gtest/googletest/include/gtest/internal/gtest-type-util.h",
     "gtest/googletest/src/gtest-all.cc",
+    "gtest/googletest/src/gtest-assertion-result.cc",
     "gtest/googletest/src/gtest-death-test.cc",
     "gtest/googletest/src/gtest-filepath.cc",
     "gtest/googletest/src/gtest-internal-inl.h",
@@ -76,16 +78,18 @@ static_library("gtest_main") {
 test("gtest_all_test") {
   sources = [
     "gtest/googletest/test/googletest-death-test-test.cc",
+    "gtest/googletest/test/googletest-fail-if-no-test-linked-test-with-disabled-test_.cc",
+    "gtest/googletest/test/googletest-fail-if-no-test-linked-test-with-enabled-test_.cc",
     "gtest/googletest/test/googletest-filepath-test.cc",
     "gtest/googletest/test/googletest-message-test.cc",
     "gtest/googletest/test/googletest-options-test.cc",
     "gtest/googletest/test/googletest-port-test.cc",
     "gtest/googletest/test/googletest-printers-test.cc",
     "gtest/googletest/test/googletest-test-part-test.cc",
-    "gtest/googletest/test/googletest-test2_test.cc",
     "gtest/googletest/test/gtest-typed-test2_test.cc",
     "gtest/googletest/test/gtest-typed-test_test.cc",
     "gtest/googletest/test/gtest-typed-test_test.h",
+    "gtest/googletest/test/gtest_dirs_test.cc",
     "gtest/googletest/test/gtest_main_unittest.cc",
     "gtest/googletest/test/gtest_pred_impl_unittest.cc",
     "gtest/googletest/test/gtest_prod_test.cc",
@@ -240,11 +244,12 @@ test("gmock_all_test") {
   sources = [
     "gtest/googlemock/test/gmock-actions_test.cc",
     "gtest/googlemock/test/gmock-cardinalities_test.cc",
-    "gtest/googlemock/test/gmock-generated-actions_test.cc",
-    "gtest/googlemock/test/gmock-generated-function-mockers_test.cc",
-    "gtest/googlemock/test/gmock-generated-matchers_test.cc",
     "gtest/googlemock/test/gmock-internal-utils_test.cc",
-    "gtest/googlemock/test/gmock-matchers_test.cc",
+    "gtest/googlemock/test/gmock-matchers-arithmetic_test.cc",
+    "gtest/googlemock/test/gmock-matchers-comparisons_test.cc",
+    "gtest/googlemock/test/gmock-matchers-containers_test.cc",
+    "gtest/googlemock/test/gmock-matchers-misc_test.cc",
+    "gtest/googlemock/test/gmock-matchers_test.h",
     "gtest/googlemock/test/gmock-more-actions_test.cc",
     "gtest/googlemock/test/gmock-nice-strict_test.cc",
     "gtest/googlemock/test/gmock-port_test.cc",
@@ -264,13 +269,21 @@ test("gmock_all_test") {
   ]
 }
 
+config("gmock_link_test_private_config") {
+  visibility = [ ":gmock_link_test" ]
+  cflags = [ "-Wno-deprecated-declarations" ]
+}
+
 test("gmock_link_test") {
   sources = [
     "gtest/googlemock/test/gmock_link2_test.cc",
     "gtest/googlemock/test/gmock_link_test.cc",
     "gtest/googlemock/test/gmock_link_test.h",
   ]
-  configs += [ ":gmock_private_config" ]
+  configs += [
+    ":gmock_private_config",
+    ":gmock_link_test_private_config",
+  ]
   deps = [
     ":gmock",
     ":gmock_main",

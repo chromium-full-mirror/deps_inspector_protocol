@@ -85,9 +85,9 @@ deps = {
   # For writing unittests.
   'src/third_party/gtest/gtest':
       Var('chromium_git') + '/external/github.com/google/googletest@' +
-      '16f637fbf4ffc3f7a01fa4eceb7906634565242f',
+      '4fe3307fb2d9f86d19777c7eb0e4809e9694dde7',
 
-  'third_party/ninja': {
+  'src/third_party/ninja': {
     'packages': [
       {
         'package': 'infra/3pp/tools/ninja/${{platform}}',
