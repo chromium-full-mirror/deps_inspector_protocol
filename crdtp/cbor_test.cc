@@ -1542,6 +1542,103 @@ TEST(GetString8ValueFromMapTest, HandlesErrorValue) {
   EXPECT_TRUE(result.empty());
 }
 
+TEST(GetString8ValueFromMapTest, RejectsDuplicateKeys) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeString8(SpanFrom("value1"), &encoded);
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeString8(SpanFrom("value2"), &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  span<uint8_t> result =
+      GetString8ValueFromMap(SpanFrom(encoded), SpanFrom("key"));
+  EXPECT_TRUE(result.empty());
+}
+
+TEST(GetString8ValueFromMapTest, RejectsNestedStructures) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("fake"), &encoded);
+  // Nested map: {"key": "spoofed"}
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeString8(SpanFrom("spoofed"), &encoded);
+  encoded.push_back(EncodeStop());
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  span<uint8_t> result =
+      GetString8ValueFromMap(SpanFrom(encoded), SpanFrom("key"));
+  EXPECT_TRUE(result.empty());
+}
+
+TEST(GetString8ValueFromMapTest, RejectsString16Values) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  // "value16" in UTF-16LE
+  std::vector<uint16_t> value16 = {'v', 'a', 'l', 'u', 'e', '1', '6'};
+  EncodeString16(SpanFrom(value16), &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  span<uint8_t> result =
+      GetString8ValueFromMap(SpanFrom(encoded), SpanFrom("key"));
+  EXPECT_TRUE(result.empty());
+}
+
+TEST(GetString8ValueFromMapTest, HandlesEmptyValuesWithDuplicates) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeString8(SpanFrom(""), &encoded);
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeString8(SpanFrom("value2"), &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  span<uint8_t> result =
+      GetString8ValueFromMap(SpanFrom(encoded), SpanFrom("key"));
+  EXPECT_TRUE(result.empty());
+}
+
+
+TEST(GetString8ValueFromMapTest, RejectsTruncatedMap) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  // Missing value here.
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  span<uint8_t> result =
+      GetString8ValueFromMap(SpanFrom(encoded), SpanFrom("key"));
+  EXPECT_TRUE(result.empty());
+}
 
 TEST(GetString8ValueFromMapTest, InvalidMessage) {
   std::vector<uint8_t> msg = {

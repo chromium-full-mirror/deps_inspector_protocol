@@ -1086,35 +1086,38 @@ span<uint8_t> GetString8ValueFromMap(span<uint8_t> message,
     return {};
   }
   tokenizer.Next();
+  span<uint8_t> result;
+  bool found_key = false;
+  bool found_value = false;
   bool is_key = true;
-  bool is_string_key = false;
-  span<uint8_t> key;
   while (tokenizer.TokenTag() != CBORTokenTag::STOP &&
          tokenizer.TokenTag() != CBORTokenTag::DONE &&
          tokenizer.TokenTag() != CBORTokenTag::ERROR_VALUE) {
-    if (is_key) {
-      if (tokenizer.TokenTag() == CBORTokenTag::STRING8) {
-        key = tokenizer.GetString8();
-        is_string_key = true;
-      } else {
-        is_string_key = false;
-      }
-    } else {
-      if (is_string_key && SpanEquals(key, string8_key)) {
-        return tokenizer.TokenTag() == CBORTokenTag::STRING8
-                   ? tokenizer.GetString8()
-                   : span<uint8_t>();
-      }
-    }
-
     if (tokenizer.TokenTag() == CBORTokenTag::MAP_START ||
         tokenizer.TokenTag() == CBORTokenTag::ARRAY_START) {
       return {};
     }
+    if (is_key) {
+      if (tokenizer.TokenTag() == CBORTokenTag::STRING8 &&
+          SpanEquals(tokenizer.GetString8(), string8_key)) {
+        if (found_key) {
+          return {};  // Duplicate key
+        }
+        found_key = true;
+      }
+    } else if (found_key && !found_value) {
+      if (tokenizer.TokenTag() == CBORTokenTag::STRING8) {
+        result = tokenizer.GetString8();
+      }
+      found_value = true;
+    }
     tokenizer.Next();
     is_key = !is_key;
   }
-  return {};
+  if (tokenizer.TokenTag() != CBORTokenTag::STOP) {
+    return {};
+  }
+  return result;
 }
 }  // namespace cbor
 }  // namespace crdtp
