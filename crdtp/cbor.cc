@@ -1119,5 +1119,52 @@ span<uint8_t> GetString8ValueFromMap(span<uint8_t> message,
   }
   return result;
 }
+
+bool HasKeyInMap(span<uint8_t> message, span<uint8_t> key) {
+  CBORTokenizer tokenizer(message);
+  if (tokenizer.TokenTag() != CBORTokenTag::ENVELOPE) {
+    return false;
+  }
+  tokenizer.EnterEnvelope();
+  if (tokenizer.TokenTag() != CBORTokenTag::MAP_START) {
+    return false;
+  }
+  tokenizer.Next();
+  bool is_key = true;
+  size_t nested_depth = 0;
+  while (tokenizer.TokenTag() != CBORTokenTag::DONE &&
+         tokenizer.TokenTag() != CBORTokenTag::ERROR_VALUE) {
+    if (tokenizer.TokenTag() == CBORTokenTag::STOP) {
+      if (nested_depth == 0) {
+        break;
+      }
+      nested_depth--;
+      if (nested_depth == 0) {
+        is_key = !is_key;
+      }
+      tokenizer.Next();
+      continue;
+    }
+    if (tokenizer.TokenTag() == CBORTokenTag::MAP_START ||
+        tokenizer.TokenTag() == CBORTokenTag::ARRAY_START) {
+      nested_depth++;
+      tokenizer.Next();
+      continue;
+    }
+    if (nested_depth > 0) {
+      tokenizer.Next();
+      continue;
+    }
+    if (is_key) {
+      if (tokenizer.TokenTag() == CBORTokenTag::STRING8 &&
+          SpanEquals(tokenizer.GetString8(), key)) {
+        return true;
+      }
+    }
+    tokenizer.Next();
+    is_key = !is_key;
+  }
+  return false;
+}
 }  // namespace cbor
 }  // namespace crdtp

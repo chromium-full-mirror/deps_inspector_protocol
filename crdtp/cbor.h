@@ -322,6 +322,10 @@ CRDTP_EXPORT Status AppendString8EntryToCBORMap(span<uint8_t> string8_key,
 // Explicitly rejects duplicate keys and non-STRING8 values.
 CRDTP_EXPORT span<uint8_t> GetString8ValueFromMap(span<uint8_t> message,
                                                   span<uint8_t> string8_key);
+// Safely checks if |key| exists in the top-level of a CBOR encoded map wrapped
+// in an envelope. Shallow parser that skips nested structures.
+// Returns true as soon as the key is found at the top level.
+CRDTP_EXPORT bool HasKeyInMap(span<uint8_t> message, span<uint8_t> key);
 
 namespace internals {  // Exposed only for writing tests.
 CRDTP_EXPORT size_t ReadTokenStart(span<uint8_t> bytes,

@@ -1648,5 +1648,159 @@ TEST(GetString8ValueFromMapTest, InvalidMessage) {
   EXPECT_TRUE(result.empty());
 }
 
+TEST(HasKeyInMapTest, FindsKeySuccessfully) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key1"), &encoded);
+  EncodeString8(SpanFrom("value1"), &encoded);
+
+  EncodeString8(SpanFrom("key2"), &encoded);
+  EncodeInt32(42, &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key1")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key2")));
+}
+
+TEST(HasKeyInMapTest, HandlesMissingKey) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key1"), &encoded);
+  EncodeString8(SpanFrom("value1"), &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  EXPECT_FALSE(HasKeyInMap(SpanFrom(encoded), SpanFrom("missing_key")));
+}
+
+TEST(HasKeyInMapTest, WorksWithVariousValueTypes) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("string_key"), &encoded);
+  EncodeString8(SpanFrom("value"), &encoded);
+
+  EncodeString8(SpanFrom("int_key"), &encoded);
+  EncodeInt32(42, &encoded);
+
+  EncodeString8(SpanFrom("double_key"), &encoded);
+  EncodeDouble(3.14, &encoded);
+
+  EncodeString8(SpanFrom("bool_true_key"), &encoded);
+  encoded.push_back(EncodeTrue());
+
+  EncodeString8(SpanFrom("bool_false_key"), &encoded);
+  encoded.push_back(EncodeFalse());
+
+  EncodeString8(SpanFrom("null_key"), &encoded);
+  encoded.push_back(EncodeNull());
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("string_key")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("int_key")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("double_key")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("bool_true_key")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("bool_false_key")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("null_key")));
+}
+
+TEST(HasKeyInMapTest, HandlesErrorValue) {
+  // Envelope with 2 bytes of content:
+  // [Map Start (0xbf), String Start length 1 (0x61)].
+  // The string key is truncated (missing its data byte), which triggers
+  // CBORTokenTag::ERROR_VALUE.
+  std::vector<uint8_t> encoded = {
+      0xd8, 0x5a, 0, 0, 0, 2, EncodeIndefiniteLengthMapStart(),
+      0x61 /* major type 3 (string), additional info 1 (length 1) */
+  };
+
+  EXPECT_FALSE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key")));
+}
+
+TEST(HasKeyInMapTest, AllowsDuplicateKeys) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeInt32(42, &encoded);
+
+  EncodeString8(SpanFrom("key"), &encoded);
+  EncodeInt32(24, &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key")));
+}
+
+TEST(HasKeyInMapTest, AllowsNestedStructures) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key1"), &encoded);
+  // Start a nested map as value.
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+  EncodeString8(SpanFrom("inner_key"), &encoded);
+  EncodeInt32(42, &encoded);
+  encoded.push_back(EncodeStop());
+
+  EncodeString8(SpanFrom("key2"), &encoded);
+  EncodeInt32(24, &encoded);
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  // We should find top-level keys even with nested structures.
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key1")));
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key2")));
+
+  // We should NOT find keys that are inside nested structures (they are not
+  // top-level).
+  EXPECT_FALSE(HasKeyInMap(SpanFrom(encoded), SpanFrom("inner_key")));
+}
+
+TEST(HasKeyInMapTest, HandlesTruncation) {
+  std::vector<uint8_t> encoded;
+  EnvelopeEncoder envelope;
+  envelope.EncodeStart(&encoded);
+  encoded.push_back(EncodeIndefiniteLengthMapStart());
+
+  EncodeString8(SpanFrom("key1"), &encoded);
+  // Missing value here.
+  // Truncated before we can write key2.
+
+  encoded.push_back(EncodeStop());
+  envelope.EncodeStop(&encoded);
+
+  // "key1" is found because we return early on seeing the key.
+  EXPECT_TRUE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key1")));
+
+  // "key2" is not found because it is not in the map (and map is truncated).
+  EXPECT_FALSE(HasKeyInMap(SpanFrom(encoded), SpanFrom("key2")));
+}
+
+TEST(HasKeyInMapTest, InvalidMessage) {
+  std::vector<uint8_t> msg = {
+      0xd8, 0x5a, 0, 0, 0, 2, EncodeIndefiniteLengthMapStart(), 42};
+  EXPECT_FALSE(HasKeyInMap(SpanFrom(msg), SpanFrom("key")));
+}
+
 }  // namespace cbor
 }  // namespace crdtp
